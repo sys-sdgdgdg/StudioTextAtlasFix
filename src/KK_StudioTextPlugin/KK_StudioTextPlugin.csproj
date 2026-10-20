@@ -1,0 +1,59 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net35</TargetFramework>
+    <LangVersion>7.3</LangVersion>
+    <RootNamespace>KK_StudioTextPlugin</RootNamespace>
+    <AssemblyName>KK_StudioTextPlugin</AssemblyName>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <EnableDefaultEmbeddedResourceItems>false</EnableDefaultEmbeddedResourceItems>
+    <GameDir Condition="'$(GameDir)' == ''">$(KK_DIR)</GameDir>
+  </PropertyGroup>
+
+  <Target Name="RequireGameDir" BeforeTargets="ResolveAssemblyReferences"
+          Condition="'$(GameDir)' == '' or !Exists('$(GameDir)')">
+    <Error Text="Point GameDir at your Koikatsu game folder, e.g. dotnet build -p:GameDir='C:\Games\Koikatsu' (or set the KK_DIR environment variable). BepInEx must be installed there." />
+  </Target>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="BepInEx">
+      <HintPath>$(GameDir)\BepInEx\core\BepInEx.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="0Harmony">
+      <HintPath>$(GameDir)\BepInEx\core\0Harmony.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine">
+      <HintPath>$(GameDir)\CharaStudio_Data\Managed\UnityEngine.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.UI">
+      <HintPath>$(GameDir)\CharaStudio_Data\Managed\UnityEngine.UI.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Assembly-CSharp">
+      <HintPath>$(GameDir)\CharaStudio_Data\Managed\Assembly-CSharp.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- resx contains binary FileRefs that ResGen cannot process on .NET Core MSBuild,
+         so the compiled .resources are checked in and embedded directly. -->
+    <None Include="Properties\Resources.resx" />
+    <None Include="UIUtility\Properties\Resources.resx" />
+    <EmbeddedResource Include="Precompiled\KK_StudioTextPlugin.Properties.Resources.resources">
+      <LogicalName>KK_StudioTextPlugin.Properties.Resources.resources</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Precompiled\UILib.Properties.Resources.resources">
+      <LogicalName>UILib.Properties.Resources.resources</LogicalName>
+    </EmbeddedResource>
+  </ItemGroup>
+
+</Project>
