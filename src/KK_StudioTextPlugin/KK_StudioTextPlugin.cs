@@ -37,8 +37,8 @@ namespace KK_StudioTextPlugin {
     public class KK_StudioTextPlugin : BaseUnityPlugin {
         internal const string PLUGIN_NAME = "Studio Text Plugin";
         internal const string GUID = "com.jim60105.kk.studiotextplugin";
-        internal const string PLUGIN_VERSION = "20.08.06.1";
-        internal const string PLUGIN_RELEASE_VERSION = "1.1.7";
+        internal const string PLUGIN_VERSION = "20.08.06.2";
+        internal const string PLUGIN_RELEASE_VERSION = "1.1.8";
 
         internal static new ManualLogSource Logger;
         public void Awake() {

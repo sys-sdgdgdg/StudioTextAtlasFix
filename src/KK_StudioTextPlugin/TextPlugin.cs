@@ -37,10 +37,8 @@ namespace KK_StudioTextPlugin {
                     MeshRenderer mr = tm.GetComponent<MeshRenderer>();
                     if (mr != null)
                         mr.material.SetTexture("_MainTex", tm.font.material.mainTexture);
-                    if (tm.gameObject.activeInHierarchy) {
-                        tm.font.RequestCharactersInTexture(tm.text);
+                    if (tm.gameObject.activeInHierarchy)
                         visible++;
-                    }
                 } catch (Exception e) {
                     Logger.LogWarning("[AtlasFix] Rebind failed for a text object: " + e.Message);
                 }
@@ -49,7 +47,7 @@ namespace KK_StudioTextPlugin {
             Texture tex = rebuiltFont.material != null ? rebuiltFont.material.mainTexture : null;
             Logger.LogMessage("[AtlasFix] Dynamic font atlas rebuilt (#" + _rebuildCount + "). New atlas size: " +
                 (tex != null ? tex.width + "x" + tex.height : "unknown") +
-                ". Re-bound " + alive + " text object(s), re-rasterized " + visible + " visible one(s).");
+                ". Re-bound " + alive + " text object(s), " + visible + " visible.");
         }
 
         internal static void RegisterTextMesh(TextMesh tm) {
