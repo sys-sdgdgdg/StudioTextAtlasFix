@@ -37,8 +37,8 @@ namespace KK_StudioTextPlugin {
     public class KK_StudioTextPlugin : BaseUnityPlugin {
         internal const string PLUGIN_NAME = "Studio Text Plugin";
         internal const string GUID = "com.jim60105.kk.studiotextplugin";
-        internal const string PLUGIN_VERSION = "20.08.06.2";
-        internal const string PLUGIN_RELEASE_VERSION = "1.1.8";
+        internal const string PLUGIN_VERSION = "20.08.06.4";
+        internal const string PLUGIN_RELEASE_VERSION = "1.2.0";
 
         internal static new ManualLogSource Logger;
         public void Awake() {
@@ -60,7 +60,6 @@ namespace KK_StudioTextPlugin {
         public static ConfigEntry<FontStyle> Default_FontStyle { get; private set; }
         public static ConfigEntry<TextAlignment> Default_Alignment { get; private set; }
         public static ConfigEntry<TextAnchor> Default_Anchor { get; private set; }
-        public static ConfigEntry<int> GlyphRasterSize { get; private set; }
 
         public void Start() {
             Default_New_Text = Config.Bind<string>("Config", "Default New Text", "NewText", "Text for new text. This is not affected by the Auto Change setting.");
@@ -72,7 +71,6 @@ namespace KK_StudioTextPlugin {
             Default_FontStyle = Config.Bind<FontStyle>("Default Settings", "FontStyle", FontStyle.Normal);
             Default_Alignment = Config.Bind<TextAlignment>("Default Settings", "Alignment", TextAlignment.Center);
             Default_Anchor = Config.Bind<TextAnchor>("Default Settings", "Anchor", TextAnchor.MiddleCenter);
-            GlyphRasterSize = Config.Bind<int>("Default Settings", "GlyphRasterSize", 500, "Font atlas raster size in px. Lower values fit more glyphs into the atlas (capacity scales quadratically). Visual size is unchanged because characterSize compensates automatically. 500 = original plugin behavior.");
         }
     }
 

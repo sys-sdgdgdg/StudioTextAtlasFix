@@ -12,50 +12,6 @@ namespace KK_StudioTextPlugin {
         internal static bool DisablePreview = true;
         private static readonly Dictionary<string, Font> DynamicFonts = new Dictionary<string, Font>();
         private static string[] FontList = new string[] { };
-        #region AtlasFix: survive dynamic font atlas rebuilds
-        // The plugin binds the font's dynamic atlas texture to a custom material ONCE in SetFont.
-        // When Unity rebuilds the atlas (CJK glyph pressure), the texture object is replaced and
-        // every material still references the orphaned old texture -> glyphs render as blank.
-        // Fix: keep a registry of created TextMeshes and re-bind the fresh atlas texture whenever
-        // Font.textureRebuilt fires, plus re-rasterize the glyphs of currently visible texts.
-        private static readonly List<TextMesh> _textMeshes = new List<TextMesh>();
-        private static int _rebuildCount;
-
-        internal static void HookAtlasRebuild() {
-            Font.textureRebuilt += OnFontTextureRebuilt;
-            Logger.LogInfo("[AtlasFix] Font.textureRebuilt hook installed - CJK text will survive atlas rebuilds.");
-        }
-
-        private static void OnFontTextureRebuilt(Font rebuiltFont) {
-            int alive = 0, visible = 0;
-            for (int i = _textMeshes.Count - 1; i >= 0; i--) {
-                TextMesh tm = _textMeshes[i];
-                if (tm == null) { _textMeshes.RemoveAt(i); continue; }
-                if (tm.font != rebuiltFont) continue;
-                alive++;
-                try {
-                    MeshRenderer mr = tm.GetComponent<MeshRenderer>();
-                    if (mr != null)
-                        mr.material.SetTexture("_MainTex", tm.font.material.mainTexture);
-                    if (tm.gameObject.activeInHierarchy)
-                        visible++;
-                } catch (Exception e) {
-                    Logger.LogWarning("[AtlasFix] Rebind failed for a text object: " + e.Message);
-                }
-            }
-            _rebuildCount++;
-            Texture tex = rebuiltFont.material != null ? rebuiltFont.material.mainTexture : null;
-            Logger.LogMessage("[AtlasFix] Dynamic font atlas rebuilt (#" + _rebuildCount + "). New atlas size: " +
-                (tex != null ? tex.width + "x" + tex.height : "unknown") +
-                ". Re-bound " + alive + " text object(s), " + visible + " visible.");
-        }
-
-        internal static void RegisterTextMesh(TextMesh tm) {
-            if (tm == null) return;
-            _textMeshes.RemoveAll(x => x == null);
-            _textMeshes.Add(tm);
-        }
-        #endregion
         internal static bool Awake() {
             //載入font3DMaterial，為了解決UI文字穿透其他物品的問題
             //因為文字無法編輯Shader，只能做Material來用
@@ -64,7 +20,6 @@ namespace KK_StudioTextPlugin {
                 Font3DMaterial.color = Color.white;
                 assetBundle.Unload(false);
                 if (GetDynamicFontNames().Count != 0) {
-                    HookAtlasRebuild();
                     return true;
                 }
             } else {
@@ -286,8 +241,7 @@ namespace KK_StudioTextPlugin {
             go.layer = 10;
             go.transform.localPosition = Vector3.zero;
             TextMesh t = go.AddComponent<TextMesh>();
-            RegisterTextMesh(t);
-            t.fontSize = KK_StudioTextPlugin.GlyphRasterSize.Value;
+            t.fontSize = 500;
             t.text = text;
             t.transform.localScale = Vector3.one;
             t.name = "TextObj";
@@ -384,7 +338,7 @@ namespace KK_StudioTextPlugin {
         /// <param name="folder">對象OCIFolder</param>
         /// <param name="size">字體大小</param>
         public static void SetCharacterSize(OCIFolder folder, float size = 1f) {
-            folder.objectItem.GetComponentInChildren<TextMesh>(true).characterSize = 0.002f * size * (500f / KK_StudioTextPlugin.GlyphRasterSize.Value);
+            folder.objectItem.GetComponentInChildren<TextMesh>(true).characterSize = 0.002f * size;
             if (KK_StudioTextPlugin. Auto_change_default.Value) {
                 KK_StudioTextPlugin.Default_FontSize.Value = size;
             }

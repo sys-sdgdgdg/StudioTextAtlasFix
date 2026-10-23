@@ -1,30 +1,57 @@
 # StudioTextAtlasFix
 
-Patched **KK_StudioTextPlugin** (Koikatsu studio text plugin, [jim60105](https://github.com/jim60105/KK)'s version) that fixes the long-standing bug where **CJK text objects randomly disappear** from studio scenes.
+> **Result: the atlas-rebind approach was a net negative and has been reverted.**
+> The latest code here (v20.08.06.4) is a faithful, behavior-identical rebuild of
+> jim60105's original plugin. For actual use, prefer the original distributed
+> `KK_StudioTextPlugin` v20.08.05.0 - the experiment and its findings are kept
+> below for the record.
 
-## The bug
+## What this repo set out to fix
 
-The plugin binds the font's dynamic atlas texture to a custom `Font3DMaterial` **once**, when the text object is created:
+Koikatsu studio text plugin (`KK_StudioTextPlugin`, by [jim60105](https://github.com/jim60105/KK)):
+CJK text objects **randomly lose characters** in studio scenes - some glyphs of a
+sentence silently vanish, run to run differently.
 
-```csharp
-textMesh.font.RequestCharactersInTexture(textMesh.text);          // one-time glyph request
-material.SetTexture("_MainTex", textMesh.font.material.mainTexture);  // one-time atlas binding
-```
+## What was tried, and what the experiments showed
 
-Unity's dynamic font atlas is small and never grows - when it overflows with glyph requests (which happens *constantly* with hanzi, and even during studio boot), Unity **replaces the texture with a fresh one**. Every already-created text object keeps referencing the orphaned old texture, while its mesh UVs are regenerated against the new atlas - so glyphs sample empty atlas regions and **silently vanish**. Which characters survive depends on rendering order, which is why the loss looks random and changes between runs. English text rarely triggers it (few dozen glyphs); Chinese/Japanese text triggers it constantly.
+**Theory**: the plugin binds the font's dynamic atlas texture to its custom
+`Font3DMaterial` only once. When Unity rebuilds the atlas (constant pressure
+under CJK), the texture object is replaced and existing materials keep sampling
+the orphaned old texture.
 
-## The fix
+**Fix attempt (v20.08.06.1 - .2)**: register every created `TextMesh`, hook
+`Font.textureRebuilt`, re-bind the fresh atlas texture on every rebuild.
 
-- Keep a registry of every `TextMesh` the plugin creates
-- Subscribe to `Font.textureRebuilt`
-- On every atlas rebuild: re-bind the fresh atlas texture to all registered text objects and re-rasterize the glyphs of currently visible ones
-- Log each rebuild with the new atlas size and the number of re-bound objects:
+**Empirical result**: text got **worse than the original** - whole sentences
+dropped to one or two visible characters. A/B testing against the original
+dll with the same scene card proved it:
 
-```
-[Message:Studio Text Plugin] [AtlasFix] Dynamic font atlas rebuilt (#1). New atlas size: 256x256. Re-bound 3 text object(s), re-rasterized 2 visible one(s).
-```
+1. **Unity 5.6 TextMesh meshes are frozen** - mesh UVs are generated once (at
+   text/font/size set time) and are NOT regenerated when the font atlas rebuilds.
+2. The original plugin's one-time texture binding is therefore load-bearing:
+   **old UVs + old (orphaned) texture = a permanently valid pair**. Frozen
+   materials also stop participating in atlas pressure, which lets the churn settle.
+3. Re-binding materials to the new atlas **breaks the frozen pair** (old UVs +
+   new texture = sampling empty atlas regions), actively destroying texts that
+   would have kept rendering.
 
-No more pre-playing the timeline hoping the atlas settles before recording - rebuilds become invisible in real time **and** during VideoExport renders.
+An additional `GlyphRasterSize` experiment (rasterize smaller, compensate with
+`characterSize`) made text completely invisible - the assumed relationship
+between `fontSize` and world size does not hold, and a leftover `250` value in
+the config file kept breaking subsequent builds until cleaned up.
+
+A deferred-rebind verification pass confirmed the rebind itself latched
+correctly (0 stale materials) - the mechanism worked as designed; the design
+was wrong about Unity's mesh behavior.
+
+## Where this leaves the original bug
+
+The original's random partial loss remains unsolved. The plausible direction
+for a real fix, based on the findings:
+
+- Per-text glyph baking: render each text object's glyphs once into a private
+  texture (TextMeshPro-style static atlas per object), completely bypassing the
+  shared dynamic atlas. Substantial work, not attempted here.
 
 ## Building
 
@@ -32,16 +59,11 @@ No more pre-playing the timeline hoping the atlas settles before recording - reb
 dotnet build src/KK_StudioTextPlugin -p:GameDir="C:\Path\To\Koikatsu"
 ```
 
-`GameDir` can also come from the `KK_DIR` environment variable. Requires BepInEx 5 installed in the game folder. The two compiled `.resources` blobs under `src/KK_StudioTextPlugin/Precompiled` are checked in (the resx contains binary file references that Core MSBuild's ResGen cannot process) and are regenerated with the `genres` recipe above their folder if you change the embedded assets.
-
-## Installation
-
-Replace `BepInEx/plugins/jim60105/KK_StudioTextPlugin.dll` (v20.08.05.0) with the built `KK_StudioTextPlugin.dll` (v20.08.06.1). Same plugin GUID `com.jim60105.kk.studiotextplugin`, so configs and scene cards are unaffected.
-
-## Notes
-
-- A `GlyphRasterSize` config (default `500` = original behavior) was added as an experimental knob; lowering it reduces the glyph rasterization size while compensating with `characterSize`, keeping the visual size identical. Real-world capacity effect depends on how the engine rasters - with the textureRebuilt fix in place, capacity no longer affects correctness.
-- Based on [jim60105/KK](https://github.com/jim60105/KK) tag `v20.08.06.0` (last Koikatsu release, identical in-tree version 20.08.05.0 to the distributed dll).
+`GameDir` can also come from the `KK_DIR` environment variable. Requires BepInEx 5
+installed in the game folder. The two compiled `.resources` blobs under
+`src/KK_StudioTextPlugin/Precompiled` are checked in (the resx contains binary file
+references that Core MSBuild's ResGen cannot process) and are regenerated from the
+original embedded assets.
 
 ## License
 
